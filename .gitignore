@@ -1,0 +1,35 @@
+# Build
+build/
+out/
+cmake-build-*/
+CMakeUserPresets.json
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+
+# Conan / vcpkg
+conan.lock
+vcpkg_installed/
+
+# Compiled
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.pdb
+*.ilk
+
+# Qt
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+
+# Misc
+*.log
+.cache/
+.claude/

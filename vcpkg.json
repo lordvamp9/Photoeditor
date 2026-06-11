@@ -1,0 +1,13 @@
+{
+  "name": "photostudio",
+  "version": "1.0.0",
+  "dependencies": [
+    "qtbase",
+    "qtsvg",
+    {
+      "name": "opencv4",
+      "default-features": false,
+      "features": ["jpeg", "png", "tiff", "webp"]
+    }
+  ]
+}

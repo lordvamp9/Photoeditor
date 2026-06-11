@@ -1,0 +1,17 @@
+# Alternative dependency setup via Conan 2.x
+# (the primary supported flows are system packages on Linux and vcpkg on Windows,
+#  see docs/BUILDING.md)
+
+[requires]
+opencv/4.8.1
+qt/6.6.0
+
+[test_requires]
+gtest/1.14.0
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout

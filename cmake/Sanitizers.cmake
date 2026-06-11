@@ -1,0 +1,10 @@
+# Address / Undefined Behavior sanitizers (Clang / GCC only)
+
+if(NOT MSVC)
+    add_compile_options(-fsanitize=address,undefined -fno-omit-frame-pointer)
+    add_link_options(-fsanitize=address,undefined)
+    message(STATUS "Sanitizers enabled: ASan + UBSan")
+else()
+    add_compile_options(/fsanitize=address)
+    message(STATUS "Sanitizers enabled: ASan (MSVC)")
+endif()

@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="/">
+        <file>theme/aero_theme.qss</file>
+        <file>icons/tools/move.svg</file>
+        <file>icons/tools/select_rect.svg</file>
+        <file>icons/tools/select_ellipse.svg</file>
+        <file>icons/tools/lasso.svg</file>
+        <file>icons/tools/magic_wand.svg</file>
+        <file>icons/tools/brush.svg</file>
+        <file>icons/tools/eraser.svg</file>
+        <file>icons/tools/clone.svg</file>
+        <file>icons/tools/fill.svg</file>
+        <file>icons/tools/gradient.svg</file>
+        <file>icons/tools/picker.svg</file>
+    </qresource>
+</RCC>
