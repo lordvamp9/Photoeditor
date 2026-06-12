@@ -4,6 +4,8 @@ Editor profesional de fotos de escritorio, escrito en **C++20** con **Qt 6** y *
 
 Publicado bajo la marca **vamp9**.
 
+> **Descarga para Windows (x64):** [PhotoStudio-1.0.0-win64.zip](https://github.com/lordvamp9/Photoeditor/releases/latest) - portable, sin instalacion. Descomprime y ejecuta `PhotoStudio.exe`.
+
 ---
 
 ## Caracteristicas
