@@ -183,10 +183,39 @@ void Document::invertSelection()
 
 // ----- Compositing -----
 
+void Document::markDirtyRect(int x, int y, int w, int h)
+{
+    if (m_needsRedraw)
+        return; // The whole cache is already invalid.
+    const cv::Rect docRect(0, 0, static_cast<int>(m_width), static_cast<int>(m_height));
+    const cv::Rect rect = cv::Rect(x, y, std::max(0, w), std::max(0, h)) & docRect;
+    if (rect.empty())
+        return;
+    m_dirtyRect = m_dirtyRect.empty() ? rect : (m_dirtyRect | rect);
+}
+
 cv::Mat Document::renderComposite() const
 {
-    if (!m_needsRedraw && !m_compositeCache.empty())
+    if (!m_needsRedraw && !m_compositeCache.empty()) {
+        if (m_dirtyRect.empty())
+            return m_compositeCache;
+
+        // Incremental path: recomposite only the dirty region into the cache.
+        // This keeps brush strokes O(stroke area) instead of O(document area).
+        const cv::Rect roi = m_dirtyRect;
+        cv::Mat target = m_compositeCache(roi);
+        target.setTo(cv::Scalar(0, 0, 0, 0));
+        for (const auto& layer : m_layers) {
+            if (!layer->isVisible() || layer->opacity() <= 0.0f)
+                continue;
+            const cv::Point off = layer->offset() - roi.tl();
+            cv::Mat targetView = target; // compositeOver clips against this view
+            compositeOver(targetView, layer->pixels(), layer->mask(), layer->opacity(),
+                          layer->blendMode(), off);
+        }
+        m_dirtyRect = cv::Rect();
         return m_compositeCache;
+    }
 
     cv::Mat out(static_cast<int>(m_height), static_cast<int>(m_width), CV_8UC4,
                 cv::Scalar(0, 0, 0, 0));
@@ -198,6 +227,7 @@ cv::Mat Document::renderComposite() const
     }
     m_compositeCache = out;
     m_needsRedraw = false;
+    m_dirtyRect = cv::Rect();
     return out;
 }
 

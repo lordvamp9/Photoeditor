@@ -4,7 +4,7 @@ Editor profesional de fotos de escritorio, escrito en **C++20** con **Qt 6** y *
 
 Publicado bajo la marca **vamp9**.
 
-> **Descarga para Windows (x64):** [PhotoStudio-1.0.0-win64.zip](https://github.com/lordvamp9/Photoeditor/releases/latest) - portable, sin instalacion. Descomprime y ejecuta `PhotoStudio.exe`.
+> **Descarga para Windows (x64):** [PhotoStudio-1.1.0-win64.zip](https://github.com/lordvamp9/Photoeditor/releases/latest) - portable, sin instalacion. Descomprime y ejecuta `PhotoStudio.exe`.
 
 ---
 
@@ -17,7 +17,19 @@ Publicado bajo la marca **vamp9**.
 - Historial de deshacer/rehacer multinivel (48 estados) con panel de historial navegable.
 
 ### Herramientas
-Mover, marco rectangular, marco eliptico, lazo, varita magica, pincel (tamano/dureza/opacidad con suavizado radial), borrador, tampon de clonar (Alt+clic fija el origen), bote de pintura, degradado lineal y cuentagotas.
+Mover, marco rectangular, marco eliptico, lazo, varita magica, pincel, borrador, tampon de clonar (Alt+clic fija el origen), bote de pintura, degradado lineal, texto y cuentagotas.
+
+### Motor de pinceles profesional
+- **7 puntas de pincel**: redondo suave, redondo duro, aerografo, caligrafia (plumin con angulo), tiza (grano), dispersion y lapiz.
+- Opciones por pincel: tamano, dureza, opacidad, flujo, espaciado, angulo y estabilizacion de trazo (suavizado).
+- **Soporte de tableta grafica**: presion del lapiz (controla tamano y/u opacidad), punta de goma del stylus (cambia automaticamente al borrador) y boton lateral del lapiz para panear.
+- Composicion incremental por region: los trazos solo recomponen el area afectada, para pintar fluido incluso en documentos grandes.
+
+### Texto y tipografia
+Herramienta de texto: clic en el lienzo abre el dialogo de tipografia (familia de fuente, tamano en puntos, negrita/cursiva/subrayado, color y vista previa en vivo); el texto se rasteriza en una capa propia en la posicion del clic.
+
+### Idiomas
+Ingles (predeterminado) y Espanol, configurable en Edicion - Preferencias (se aplica al reiniciar).
 
 ### Filtros (33 integrados)
 - **Ajustes**: Brillo/Contraste, Niveles, Curvas (spline Catmull-Rom), Exposicion, Tono/Saturacion, Equilibrio de color, Intensidad (vibrance), Invertir, Desaturar, Sepia, Posterizar, Umbral.

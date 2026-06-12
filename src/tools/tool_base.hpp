@@ -22,20 +22,56 @@ enum Modifier : u32 {
 struct ToolContext {
     Core::Document* document = nullptr;
     std::function<void()> requestRepaint;
+    // Cheaper repaint covering only a document-space rectangle (x, y, w, h).
+    std::function<void(int, int, int, int)> requestRepaintRegion;
     std::function<void(const std::string&)> commitHistory;
     std::function<void(const cv::Vec4b&)> pickForeground;
     cv::Vec4b foreground{0, 0, 0, 255};
     cv::Vec4b background{255, 255, 255, 255};
+    // Stylus pressure in [0,1]; 1.0 for mouse input.
+    f32 pressure = 1.0f;
 };
 
-// A numeric, slider-editable tool option (exposed in the Properties panel).
+// A tool option exposed in the Properties panel: a numeric slider (default),
+// a named-choice combo (get/set exchange the choice index) or an on/off toggle.
 struct ToolOption {
+    enum class Kind : u8 { Slider, Choice, Toggle };
+
     std::string label;
-    f32 minValue;
-    f32 maxValue;
-    f32 step;
+    f32 minValue = 0.0f;
+    f32 maxValue = 1.0f;
+    f32 step = 1.0f;
     std::function<f32()> get;
     std::function<void(f32)> set;
+    Kind kind = Kind::Slider;
+    std::vector<std::string> choices{};
+
+    static ToolOption choice(std::string label, std::vector<std::string> names,
+                             std::function<f32()> get, std::function<void(f32)> set)
+    {
+        ToolOption o;
+        o.label = std::move(label);
+        o.minValue = 0.0f;
+        o.maxValue = static_cast<f32>(names.size() - 1);
+        o.step = 1.0f;
+        o.get = std::move(get);
+        o.set = std::move(set);
+        o.kind = Kind::Choice;
+        o.choices = std::move(names);
+        return o;
+    }
+
+    static ToolOption toggle(std::string label, std::function<f32()> get,
+                             std::function<void(f32)> set)
+    {
+        ToolOption o;
+        o.label = std::move(label);
+        o.maxValue = 1.0f;
+        o.get = std::move(get);
+        o.set = std::move(set);
+        o.kind = Kind::Toggle;
+        return o;
+    }
 };
 
 class ToolBase {

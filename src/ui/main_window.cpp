@@ -13,6 +13,8 @@
 #include "ui/dialogs/filter_dialog.hpp"
 #include "ui/dialogs/new_document_dialog.hpp"
 #include "ui/dialogs/resize_dialog.hpp"
+#include "ui/dialogs/settings_dialog.hpp"
+#include "ui/dialogs/text_dialog.hpp"
 #include "ui/image_convert.hpp"
 #include "ui/panels/colors_panel.hpp"
 #include "ui/panels/history_panel.hpp"
@@ -50,11 +52,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent)
 
     // Shared tool context wiring.
     m_toolContext.requestRepaint = [this] { m_canvas->refresh(); };
+    m_toolContext.requestRepaintRegion = [this](int x, int y, int w, int h) {
+        m_canvas->refreshRegion(x, y, w, h);
+    };
     m_toolContext.commitHistory = [this](const std::string& desc) {
         commitHistory(QString::fromStdString(desc));
     };
     m_toolContext.pickForeground = [this](const cv::Vec4b&) { m_colorsPanel->syncFromContext(); };
     m_canvas->setToolContext(&m_toolContext);
+    m_canvas->setEraserTool(m_tools.at("eraser").get());
 
     onToolSelected("brush");
 
@@ -80,6 +86,10 @@ void MainWindow::createTools()
     m_tools["fill"] = std::make_unique<BucketFillTool>();
     m_tools["gradient"] = std::make_unique<GradientTool>();
     m_tools["picker"] = std::make_unique<ColorPickerTool>();
+
+    auto textTool = std::make_unique<TextTool>();
+    textTool->onTextRequested = [this](f32 x, f32 y) { addTextAt(x, y); };
+    m_tools["text"] = std::move(textTool);
 }
 
 void MainWindow::createMenus()
@@ -108,6 +118,11 @@ void MainWindow::createMenus()
                     &MainWindow::onDeselect);
     edit->addAction(tr("&Invert Selection"), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_I), this,
                     &MainWindow::onInvertSelection);
+    edit->addSeparator();
+    edit->addAction(tr("&Preferences..."), QKeySequence::Preferences, this, [this] {
+        SettingsDialog dialog(this);
+        dialog.exec();
+    });
 
     // ----- Image -----
     QMenu* image = menuBar()->addMenu(tr("&Image"));
@@ -128,9 +143,9 @@ void MainWindow::createMenus()
     // ----- Filter (generated from the registry) -----
     QMenu* filterMenu = menuBar()->addMenu(tr("Filte&r"));
     for (const auto& [category, names] : Filters::FilterRegistry::instance().byCategory()) {
-        QMenu* sub = filterMenu->addMenu(QString::fromStdString(category));
+        QMenu* sub = filterMenu->addMenu(QCoreApplication::translate("Core", category.c_str()));
         for (const auto& name : names) {
-            sub->addAction(QString::fromStdString(name) + "...", this,
+            sub->addAction(QCoreApplication::translate("Core", name.c_str()) + "...", this,
                            [this, name] { onFilterTriggered(name); });
         }
     }
@@ -167,14 +182,15 @@ void MainWindow::createToolBar()
 
     const std::vector<std::string> order = {"move",   "select_rect", "select_ellipse", "lasso",
                                             "magic_wand", "brush",   "eraser",         "clone",
-                                            "fill",   "gradient",    "picker"};
+                                            "fill",   "gradient",    "text",           "picker"};
     for (const auto& key : order) {
         auto& tool = m_tools.at(key);
         const QString iconPath =
             QString(":/icons/tools/%1.svg").arg(QString::fromStdString(tool->iconName()));
-        auto* action = toolbar->addAction(QIcon(iconPath), QString::fromStdString(tool->name()));
+        const QString toolName = QCoreApplication::translate("Core", tool->name().c_str());
+        auto* action = toolbar->addAction(QIcon(iconPath), toolName);
         action->setCheckable(true);
-        action->setToolTip(QString::fromStdString(tool->name()));
+        action->setToolTip(toolName);
         m_toolGroup->addAction(action);
         connect(action, &QAction::triggered, this, [this, key] { onToolSelected(key); });
         if (key == "brush")
@@ -478,32 +494,46 @@ void MainWindow::onAddTextLayer()
 {
     if (!m_document)
         return;
+    // Menu entry: place the text centered on the canvas.
+    addTextAt(-1.0f, -1.0f);
+}
 
-    bool ok = false;
-    const QString text = QInputDialog::getText(this, tr("Add Text Layer"), tr("Text:"),
-                                               QLineEdit::Normal, QString(), &ok);
-    if (!ok || text.isEmpty())
+void MainWindow::addTextAt(f32 x, f32 y)
+{
+    if (!m_document)
         return;
 
-    QFont font = QFontDialog::getFont(&ok, QFont("Helvetica Neue", 48), this);
-    if (!ok)
+    const QColor initial(m_toolContext.foreground[0], m_toolContext.foreground[1],
+                         m_toolContext.foreground[2]);
+    TextDialog dialog(initial, this);
+    if (dialog.exec() != QDialog::Accepted)
+        return;
+    const QString text = dialog.text();
+    if (text.trimmed().isEmpty())
         return;
 
-    QImage image(static_cast<int>(m_document->width()), static_cast<int>(m_document->height()),
-                 QImage::Format_RGBA8888);
+    const int docW = static_cast<int>(m_document->width());
+    const int docH = static_cast<int>(m_document->height());
+
+    QImage image(docW, docH, QImage::Format_RGBA8888);
     image.fill(Qt::transparent);
     QPainter painter(&image);
     painter.setRenderHint(QPainter::TextAntialiasing);
-    painter.setFont(font);
-    painter.setPen(QColor(m_toolContext.foreground[0], m_toolContext.foreground[1],
-                          m_toolContext.foreground[2]));
-    painter.drawText(image.rect(), Qt::AlignCenter, text);
+    painter.setFont(dialog.font());
+    painter.setPen(dialog.color());
+    if (x < 0.0f || y < 0.0f) {
+        painter.drawText(image.rect(), Qt::AlignCenter, text);
+    } else {
+        // Anchor the text's top-left at the clicked document position.
+        painter.drawText(QRectF(x, y, docW - x, docH - y),
+                         Qt::AlignLeft | Qt::AlignTop | Qt::TextWordWrap, text);
+    }
     painter.end();
 
     auto layer = std::make_shared<Core::Layer>(m_document->width(), m_document->height(),
                                                Core::LayerType::Text);
     layer->pixels() = qimageToMat(image);
-    layer->setName(text.toStdString());
+    layer->setName(text.left(32).toStdString());
     m_document->addLayer(layer);
     commitHistory(tr("Text Layer"));
     refreshAll();

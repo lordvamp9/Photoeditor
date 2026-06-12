@@ -51,6 +51,9 @@ private slots:
     void onToolSelected(const std::string& toolKey);
 
 private:
+    void addTextAt(f32 x, f32 y);
+
+private:
     void createTools();
     void createMenus();
     void createToolBar();

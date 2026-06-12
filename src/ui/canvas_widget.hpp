@@ -21,6 +21,12 @@ public:
     void setDocument(Core::Document* doc);
     void setTool(Tools::ToolBase* tool) { m_tool = tool; }
     void setToolContext(Tools::ToolContext* ctx) { m_ctx = ctx; }
+    // Tool used when the stylus eraser tip touches the tablet.
+    void setEraserTool(Tools::ToolBase* tool) { m_eraserTool = tool; }
+
+    // Re-converts and repaints only a document-space region (fast path used
+    // by paint tools during a stroke).
+    void refreshRegion(int x, int y, int w, int h);
 
     f32 zoom() const { return m_zoom; }
     void setZoom(f32 zoom);
@@ -42,6 +48,7 @@ protected:
     void wheelEvent(QWheelEvent* event) override;
     void keyPressEvent(QKeyEvent* event) override;
     void keyReleaseEvent(QKeyEvent* event) override;
+    void tabletEvent(QTabletEvent* event) override;
 
 private:
     QPointF docToWidget(QPointF docPos) const;
@@ -50,9 +57,14 @@ private:
     void rebuildSelectionOutline();
     void centerDocument();
 
+    Tools::ToolBase* activeTool() const;
+
     Core::Document* m_doc = nullptr;
     Tools::ToolBase* m_tool = nullptr;
+    Tools::ToolBase* m_eraserTool = nullptr;
     Tools::ToolContext* m_ctx = nullptr;
+    bool m_tabletDown = false;
+    bool m_tabletEraser = false;
 
     QImage m_composite;
     QPixmap m_checkerboard;

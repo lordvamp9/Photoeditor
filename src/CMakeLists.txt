@@ -71,6 +71,12 @@ qt_add_executable(PhotoStudio
     ui/dialogs/new_document_dialog.hpp
     ui/dialogs/resize_dialog.cpp
     ui/dialogs/resize_dialog.hpp
+    ui/dialogs/settings_dialog.cpp
+    ui/dialogs/settings_dialog.hpp
+    ui/dialogs/text_dialog.cpp
+    ui/dialogs/text_dialog.hpp
+    ui/i18n/spanish_translator.cpp
+    ui/i18n/spanish_translator.hpp
     ui/image_convert.hpp
     ui/main_window.cpp
     ui/main_window.hpp
@@ -86,6 +92,11 @@ qt_add_executable(PhotoStudio
     ui/theme/theme_engine.hpp
     ${CMAKE_SOURCE_DIR}/assets/resources.qrc
 )
+
+# Embed the application icon into the Windows executable.
+if(WIN32)
+    target_sources(PhotoStudio PRIVATE ${CMAKE_SOURCE_DIR}/assets/app.rc)
+endif()
 
 target_link_libraries(PhotoStudio PRIVATE
     photostudio_core

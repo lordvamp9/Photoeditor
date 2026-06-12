@@ -1,5 +1,6 @@
 <RCC>
     <qresource prefix="/">
+        <file>icon.png</file>
         <file>theme/aero_theme.qss</file>
         <file>icons/tools/move.svg</file>
         <file>icons/tools/select_rect.svg</file>
@@ -12,5 +13,6 @@
         <file>icons/tools/fill.svg</file>
         <file>icons/tools/gradient.svg</file>
         <file>icons/tools/picker.svg</file>
+        <file>icons/tools/text.svg</file>
     </qresource>
 </RCC>

@@ -7,9 +7,12 @@
 #include <QKeyEvent>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPointingDevice>
+#include <QTabletEvent>
 #include <QWheelEvent>
 
 #include <algorithm>
+#include <cstring>
 
 namespace PhotoStudio::UI {
 
@@ -53,6 +56,33 @@ void CanvasWidget::refresh()
         m_selectionOutline.clear();
     }
     update();
+}
+
+void CanvasWidget::refreshRegion(int x, int y, int w, int h)
+{
+    if (!m_doc || m_composite.isNull()) {
+        refresh();
+        return;
+    }
+
+    const cv::Mat composite = m_doc->renderComposite(); // incremental recomposite
+    const QRect bounds(0, 0, m_composite.width(), m_composite.height());
+    const QRect roi = QRect(x, y, w, h).intersected(bounds);
+    if (roi.isEmpty())
+        return;
+
+    // Copy only the changed scanline spans into the cached QImage.
+    const size_t span = static_cast<size_t>(roi.width()) * 4;
+    for (int row = roi.top(); row <= roi.bottom(); ++row) {
+        const auto* src = composite.ptr<u8>(row) + static_cast<size_t>(roi.left()) * 4;
+        u8* dst = m_composite.scanLine(row) + static_cast<size_t>(roi.left()) * 4;
+        std::memcpy(dst, src, span);
+    }
+
+    // Repaint just the affected widget area (1px guard for zoom rounding).
+    const QPointF tl = docToWidget(roi.topLeft());
+    const QPointF br = docToWidget(roi.bottomRight() + QPoint(1, 1));
+    update(QRectF(tl, br).toAlignedRect().adjusted(-2, -2, 2, 2));
 }
 
 void CanvasWidget::setZoom(f32 zoom)
@@ -194,6 +224,14 @@ void CanvasWidget::paintEvent(QPaintEvent*)
     }
 }
 
+Tools::ToolBase* CanvasWidget::activeTool() const
+{
+    // While the stylus eraser tip is in contact, route input to the eraser.
+    if (m_tabletEraser && m_eraserTool)
+        return m_eraserTool;
+    return m_tool;
+}
+
 void CanvasWidget::mousePressEvent(QMouseEvent* event)
 {
     setFocus();
@@ -204,6 +242,8 @@ void CanvasWidget::mousePressEvent(QMouseEvent* event)
         return;
     }
     if (event->button() == Qt::LeftButton && m_tool && m_ctx && m_doc) {
+        if (m_ctx)
+            m_ctx->pressure = 1.0f;
         const QPointF doc = widgetToDoc(event->position());
         m_tool->onMouseDown(static_cast<f32>(doc.x()), static_cast<f32>(doc.y()),
                             toModifiers(event->modifiers()), *m_ctx);
@@ -224,6 +264,8 @@ void CanvasWidget::mouseMoveEvent(QMouseEvent* event)
     emit cursorMoved(static_cast<int>(doc.x()), static_cast<int>(doc.y()));
 
     if ((event->buttons() & Qt::LeftButton) && m_tool && m_ctx && m_doc) {
+        if (m_ctx)
+            m_ctx->pressure = 1.0f;
         m_tool->onMouseMove(static_cast<f32>(doc.x()), static_cast<f32>(doc.y()),
                             toModifiers(event->modifiers()), *m_ctx);
         update();
@@ -242,6 +284,74 @@ void CanvasWidget::mouseReleaseEvent(QMouseEvent* event)
         m_tool->onMouseUp(static_cast<f32>(doc.x()), static_cast<f32>(doc.y()),
                           toModifiers(event->modifiers()), *m_ctx);
         refresh();
+    }
+}
+
+void CanvasWidget::tabletEvent(QTabletEvent* event)
+{
+    // Accepting tablet events stops Qt from synthesizing duplicate mouse
+    // events, so pen input flows through here exclusively.
+    event->accept();
+    if (!m_tool || !m_ctx || !m_doc)
+        return;
+
+    const QPointF doc = widgetToDoc(event->position());
+    const u32 mods = toModifiers(event->modifiers());
+
+    switch (event->type()) {
+    case QEvent::TabletPress:
+        setFocus();
+        // The barrel button (mapped to middle/right by most drivers) pans.
+        if (event->button() == Qt::MiddleButton || event->button() == Qt::RightButton) {
+            m_panning = true;
+            m_lastMouse = event->position().toPoint();
+            setCursor(Qt::ClosedHandCursor);
+            return;
+        }
+        if (event->button() != Qt::LeftButton)
+            return;
+        m_tabletEraser = event->pointingDevice() &&
+                         event->pointingDevice()->pointerType() == QPointingDevice::PointerType::Eraser;
+        m_ctx->pressure = static_cast<f32>(event->pressure());
+        m_tabletDown = true;
+        activeTool()->onMouseDown(static_cast<f32>(doc.x()), static_cast<f32>(doc.y()), mods,
+                                  *m_ctx);
+        update();
+        break;
+
+    case QEvent::TabletMove:
+        if (m_panning) {
+            m_pan += event->position().toPoint() - m_lastMouse;
+            m_lastMouse = event->position().toPoint();
+            update();
+            return;
+        }
+        emit cursorMoved(static_cast<int>(doc.x()), static_cast<int>(doc.y()));
+        if (!m_tabletDown)
+            return;
+        m_ctx->pressure = static_cast<f32>(event->pressure());
+        activeTool()->onMouseMove(static_cast<f32>(doc.x()), static_cast<f32>(doc.y()), mods,
+                                  *m_ctx);
+        break;
+
+    case QEvent::TabletRelease:
+        if (m_panning) {
+            m_panning = false;
+            setCursor(m_spaceDown ? Qt::OpenHandCursor : Qt::ArrowCursor);
+            return;
+        }
+        if (!m_tabletDown)
+            return;
+        activeTool()->onMouseUp(static_cast<f32>(doc.x()), static_cast<f32>(doc.y()), mods,
+                                *m_ctx);
+        m_tabletDown = false;
+        m_tabletEraser = false;
+        m_ctx->pressure = 1.0f;
+        refresh();
+        break;
+
+    default:
+        break;
     }
 }
 

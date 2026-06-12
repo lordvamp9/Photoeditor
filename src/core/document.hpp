@@ -58,7 +58,14 @@ public:
     // ----- Compositing -----
     cv::Mat renderComposite() const;
     cv::Mat renderPreview(u32 maxSize = 512) const;
-    void markDirty() { m_needsRedraw = true; }
+    void markDirty()
+    {
+        m_needsRedraw = true;
+        m_dirtyRect = cv::Rect();
+    }
+    // Cheap incremental invalidation: only this document-space rectangle is
+    // recomposited on the next renderComposite() call.
+    void markDirtyRect(int x, int y, int w, int h);
 
     // ----- Whole-image operations -----
     void resizeCanvas(u32 newWidth, u32 newHeight);
@@ -104,6 +111,8 @@ private:
 
     mutable cv::Mat m_compositeCache;
     mutable bool m_needsRedraw = true;
+    // Non-empty only when the cache is valid except for this region.
+    mutable cv::Rect m_dirtyRect;
 };
 
 } // namespace PhotoStudio::Core
