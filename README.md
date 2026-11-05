@@ -71,8 +71,8 @@ cmake --build build
 
 ```powershell
 git clone https://github.com/Microsoft/vcpkg
-.\\vcpkg\\bootstrap-vcpkg.bat
-$env:VCPKG_ROOT = (Resolve-Path .\\vcpkg)
+.\vcpkg\bootstrap-vcpkg.bat
+$env:VCPKG_ROOT = (Resolve-Path .\vcpkg)
 cmake --preset windows-msvc
 cmake --build --preset windows-msvc
 ```
