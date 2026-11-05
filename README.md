@@ -71,8 +71,8 @@ cmake --build build
 
 ```powershell
 git clone https://github.com/Microsoft/vcpkg
-.\vcpkg\bootstrap-vcpkg.bat
-$env:VCPKG_ROOT = (Resolve-Path .\vcpkg)
+.\\vcpkg\\bootstrap-vcpkg.bat
+$env:VCPKG_ROOT = (Resolve-Path .\\vcpkg)
 cmake --preset windows-msvc
 cmake --build --preset windows-msvc
 ```
@@ -119,8 +119,8 @@ Arquitectura completa en [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Licencia
 
-**Vamp9 Non-Commercial Attribution License 1.0** - ver [LICENSE](LICENSE).
+El código original de PhotoStudio creado por **vamp9** está bajo la **licencia MIT**; consulta [LICENSE](LICENSE).
 
-En resumen: uso, modificacion y distribucion libres para fines no comerciales manteniendo la atribucion a **vamp9**. Queda prohibida la comercializacion, salvo que se realice bajo la marca **vamp9** con autorizacion expresa de su titular.
+Las dependencias y componentes de terceros conservan sus propias licencias. Al redistribuir binarios, revisa e incluye los avisos y materiales que exijan sus licencias.
 
 Copyright (c) 2026 **vamp9**
